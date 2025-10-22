@@ -1,0 +1,35 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-19932e75ff7a7929db46681cf116b20b4fc4c833",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/ArenaVault.sol": "project/contracts/ArenaVault.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/ArenaVault.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract ArenaVault {\n    address public owner;\n    mapping(address => uint256) public balances;\n\n    event Deposited(address indexed user, uint256 amount);\n    event Withdrawn(address indexed user, uint256 amount);\n\n    constructor() {\n        owner = msg.sender;\n    }\n\n    function deposit() external payable {\n        require(msg.value > 0, \"No ETH sent\");\n        balances[msg.sender] += msg.value;\n        emit Deposited(msg.sender, msg.value);\n    }\n\n    function withdraw(uint256 amount) external {\n        require(balances[msg.sender] >= amount, \"Insufficient balance\");\n        balances[msg.sender] -= amount;\n        payable(msg.sender).transfer(amount);\n        emit Withdrawn(msg.sender, amount);\n    }\n\n    function getBalance(address user) external view returns (uint256) {\n        return balances[user];\n    }\n\n    // --- BATTLES ---\n    enum BattleStatus {\n        Waiting,\n        Ongoing,\n        Settled\n    }\n\n    struct Battle {\n        address player1;\n        address player2;\n        uint256 stake;\n        address winner;\n        BattleStatus status;\n    }\n\n    Battle[] public battles;\n    mapping(address => uint256[]) public playerBattles;\n\n    // Create a battle\n    function createBattle(uint256 stake) external {\n        require(balances[msg.sender] >= stake, \"Not enough balance\");\n        balances[msg.sender] -= stake;\n\n        Battle memory newBattle = Battle({\n            player1: msg.sender,\n            player2: address(0),\n            stake: stake,\n            winner: address(0),\n            status: BattleStatus.Waiting\n        });\n\n        battles.push(newBattle);\n        playerBattles[msg.sender].push(battles.length - 1);\n    }\n\n    // Join an existing battle\n    function joinBattle(uint256 battleId) external {\n        Battle storage battle = battles[battleId];\n        require(battle.status == BattleStatus.Waiting, \"Battle not open\");\n        require(battle.player1 != msg.sender, \"Cannot join own battle\");\n        require(balances[msg.sender] >= battle.stake, \"Not enough balance\");\n\n        balances[msg.sender] -= battle.stake;\n        battle.player2 = msg.sender;\n        battle.status = BattleStatus.Ongoing;\n\n        playerBattles[msg.sender].push(battleId);\n    }\n\n    // Settle battle (random winner MVP)\n    function settleBattle(uint256 battleId) external {\n        Battle storage battle = battles[battleId];\n        require(battle.status == BattleStatus.Ongoing, \"Battle not ongoing\");\n\n        // Pseudo-random winner (MVP only; replace with Pyth Entropy later)\n        uint256 rand = uint256(\n            keccak256(\n                abi.encodePacked(\n                    block.timestamp,\n                    battle.player1,\n                    battle.player2\n                )\n            )\n        );\n        address winner = (rand % 2 == 0) ? battle.player1 : battle.player2;\n\n        uint256 totalStake = battle.stake * 2;\n        balances[winner] += totalStake;\n\n        battle.winner = winner;\n        battle.status = BattleStatus.Settled;\n    }\n\n    // --- FRONTEND HELPERS ---\n    function getBattle(uint256 battleId) external view returns (Battle memory) {\n        return battles[battleId];\n    }\n\n    function getAllBattles() external view returns (Battle[] memory) {\n        return battles;\n    }\n\n    function getOpenBattles() external view returns (Battle[] memory) {\n        uint256 count = 0;\n        for (uint256 i = 0; i < battles.length; i++) {\n            if (battles[i].status == BattleStatus.Waiting) count++;\n        }\n\n        Battle[] memory open = new Battle[](count);\n        uint256 index = 0;\n        for (uint256 i = 0; i < battles.length; i++) {\n            if (battles[i].status == BattleStatus.Waiting) {\n                open[index] = battles[i];\n                index++;\n            }\n        }\n        return open;\n    }\n}\n"
+      }
+    }
+  }
+}

@@ -10,6 +10,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
 import MetaMaskSDK from "@metamask/sdk";
+import { getArenaVaultContract } from "@/lib/arenaVault/arenaVault";
+
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      isMetaMask?: boolean;
+    };
+  }
+}
 
 interface User {
   id: string; 
@@ -25,25 +35,24 @@ export default function Dashboard() {
   const [isConnectingWallet, setIsConnectingWallet] = useState(false);
   const [balance, setBalance] = useState<string | null>(null);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
+  const [isCheckingVaultBalance, setIsCheckingVaultBalance] = useState(false);
+  const [depositAmount, setDepositAmount] = useState<string>("");
+  const [isDepositing, setIsDepositing] = useState(false);
+  const [vaultBalance, setVaultBalance] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
-
-
-
-
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-        console.log(session);
+      console.log(session);
       if (!session) {
         router.push("/auth/login");
         return;
       }
 
-      // Fetch user data from database
       try {
-        const email =  session.user.email;
+        const email = session.user.email;
         console.log(email);
         const response = await fetch(`/api/user/${email}`);
         if (response.ok) {
@@ -63,31 +72,33 @@ export default function Dashboard() {
   const handleConnectWallet = async () => {
     setIsConnectingWallet(true);
     try {
-          const MMSDK = new MetaMaskSDK({
-            dappMetadata: {
-              name: "Next.js Dapp",
-              url: typeof window !== "undefined" ? window.location.href : "",
-            },
-            infuraAPIKey: "f302b612a16e4208b8f64973e42e3b84",
-          });
-    
-          const ethereum = MMSDK.getProvider();
-          console.log(ethereum);
-          const accounts = await MMSDK.connect();
-          console.log(accounts);
-          console.log(accounts[0]);
-          if (user) {
-            setUser({
-              ...user,
-              connectedWallet: accounts[0]
-            });
-          }
-        } catch (err) {
-          console.error("MetaMask connection failed", err);
-        }
-        setIsConnectingWallet(false);
+      const MMSDK = new MetaMaskSDK({
+        dappMetadata: {
+          name: "ArenaFi - The Battle Arena",
+          url: typeof window !== "undefined" ? window.location.href : "",
+        },
+        infuraAPIKey: "f302b612a16e4208b8f64973e42e3b84",
+      });
+      
+      const ethereum = MMSDK.getProvider();
+      console.log(ethereum);
+      const accounts = await MMSDK.connect();
+      console.log(accounts);
+      console.log(accounts[0]);
+      
+      if (user) {
+        setUser({
+          ...user,
+          connectedWallet: accounts[0]
+        });
+        setTimeout(() => fetchVaultBalance(), 1000);
+      }
+    } catch (err) {
+      console.error("MetaMask connection failed", err);
+    } finally {
+      setIsConnectingWallet(false);
+    }
   };
-
 
   const handleCheckBalance = async () => {
     if (!user?.connectedWallet) {
@@ -113,6 +124,79 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/");
+  };
+
+  const handleDepositETH = async () => {
+    if (!user?.connectedWallet || !depositAmount) {
+      alert("Please connect wallet and enter deposit amount");
+      return;
+    }
+
+    setIsDepositing(true);
+    try {
+      // Get MetaMask provider and signer - make sure we're on Sepolia
+      if (typeof window !== 'undefined' && window.ethereum) {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        
+        // Check if we're on Sepolia network
+        const network = await provider.getNetwork();
+        if (network.chainId !== BigInt(11155111)) { // Sepolia chain ID
+          alert("Please switch to Sepolia testnet in MetaMask");
+          return;
+        }
+        
+        const signer = await provider.getSigner();
+        
+        const vault = getArenaVaultContract(signer);
+        const tx = await vault.deposit({ value: ethers.parseEther(depositAmount) });
+        await tx.wait();
+        
+        console.log("Deposit successful!");
+        alert(`Successfully deposited ${depositAmount} Sepolia ETH to ArenaFi Vault!`);
+        setDepositAmount("");
+        
+        // Refresh balances
+        await handleCheckBalance();
+        await handleCheckVaultBalance();
+      }
+    } catch (error) {
+      console.error("Deposit failed:", error);
+      alert("Deposit failed. Please try again.");
+    } finally {
+      setIsDepositing(false);
+    }
+  };
+
+  const fetchVaultBalance = async () => {
+    if (!user?.connectedWallet) return;
+    
+    try {
+      const provider = new ethers.JsonRpcProvider("https://sepolia.infura.io/v3/f302b612a16e4208b8f64973e42e3b84");
+      const vault = getArenaVaultContract(provider);
+      const balance = await vault.getBalance(user.connectedWallet);
+      const balanceEth = ethers.formatEther(balance);
+      setVaultBalance(balanceEth);
+      console.log("Vault balance:", balanceEth);
+    } catch (error) {
+      console.error("Failed to fetch vault balance:", error);
+    }
+  };
+
+  const handleCheckVaultBalance = async () => {
+    if (!user?.connectedWallet) {
+      alert("No wallet connected");
+      return;
+    }
+
+    setIsCheckingVaultBalance(true);
+    try {
+      await fetchVaultBalance();
+    } catch (error) {
+      console.error("Error fetching vault balance:", error);
+      alert("Failed to fetch vault balance. Please try again.");
+    } finally {
+      setIsCheckingVaultBalance(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -214,8 +298,10 @@ export default function Dashboard() {
                       <div className="text-xs sm:text-sm text-muted-foreground">ETH Balance</div>
                     </div>
                     <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg">
-                      <div className="text-xl sm:text-2xl font-bold text-primary">0</div>
-                      <div className="text-xs sm:text-sm text-muted-foreground">$ARENA Tokens</div>
+                      <div className="text-xl sm:text-2xl font-bold text-primary">
+                        {vaultBalance ? parseFloat(vaultBalance).toFixed(4) : "0.00"}
+                      </div>
+                      <div className="text-xs sm:text-sm text-muted-foreground">Vault Balance</div>
                     </div>
                   </div>
                 </div>
@@ -255,7 +341,7 @@ export default function Dashboard() {
                         </Button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                       <Button variant="outline" className="w-full text-xs sm:text-sm">
                         Disconnect Wallet
                       </Button>
@@ -265,13 +351,57 @@ export default function Dashboard() {
                         onClick={handleCheckBalance}
                         disabled={isCheckingBalance}
                       >
-                        {isCheckingBalance ? "Checking..." : "Check Balance"}
+                        {isCheckingBalance ? "Checking..." : "Wallet Balance"}
                       </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full text-xs sm:text-sm bg-secondary text-secondary-foreground" 
+                        onClick={handleCheckVaultBalance}
+                        disabled={isCheckingVaultBalance}
+                      >
+                        {isCheckingVaultBalance ? "Checking..." : "Vault Balance"}
+                      </Button>
+                    </div>
+                    
+                    {/* Deposit Section */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Deposit Amount (ETH)</label>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="0.1"
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(e.target.value)}
+                            className="flex-1 p-2 bg-muted rounded text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          <Button 
+                            variant="outline" 
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm" 
+                            onClick={handleDepositETH}
+                            disabled={isDepositing || !depositAmount}
+                          >
+                            {isDepositing ? "Depositing..." : "Deposit Sepolia ETH"}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          💡 Make sure you&apos;re on Sepolia testnet and have Sepolia ETH
+                        </p>
+                      </div>
                     </div>
                     {balance && (
                       <div className="p-3 bg-muted/50 rounded-lg">
-                        <div className="text-xs sm:text-sm text-muted-foreground">Current Balance</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">Wallet Balance</div>
                         <div className="text-base sm:text-lg font-bold text-primary">{parseFloat(balance).toFixed(4)} ETH</div>
+                      </div>
+                    )}
+                    
+                    {vaultBalance && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <div className="text-xs sm:text-sm text-muted-foreground">ArenaFi Vault Balance</div>
+                        <div className="text-base sm:text-lg font-bold text-primary">{parseFloat(vaultBalance).toFixed(4)} ETH</div>
                       </div>
                     )}  
                   </div>
@@ -332,9 +462,9 @@ export default function Dashboard() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 sm:space-y-3">
-                <Button className="w-full arena-glow text-xs sm:text-sm" disabled={!user.connectedWallet}>
+                <Button className="w-full arena-glow text-xs sm:text-sm" disabled={!user.connectedWallet} onClick={() => router.push('/arena')}>
                   <Coins className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                  Start Battle
+                  Join Battle Arena
                 </Button>
                 <Button variant="outline" className="w-full arena-border-glow text-xs sm:text-sm">
                   <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />

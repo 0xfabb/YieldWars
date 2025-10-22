@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-4152898f47c6def75fc2ed060d45512920d14afc",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/ArenaVault.sol": "project/contracts/ArenaVault.sol",
+    "contracts/Counter.sol": "project/contracts/Counter.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/ArenaVault.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract ArenaVault {\n    address public owner;\n    mapping(address => uint256) public balances;\n\n    event Deposited(address indexed user, uint256 amount);\n    event Withdrawn(address indexed user, uint256 amount);\n\n    constructor() {\n        owner = msg.sender;\n    }\n\n    function deposit() external payable {\n        require(msg.value > 0, \"No ETH sent\");\n        balances[msg.sender] += msg.value;\n        emit Deposited(msg.sender, msg.value);\n    }\n\n    function withdraw(uint256 amount) external {\n        require(balances[msg.sender] >= amount, \"Insufficient balance\");\n        balances[msg.sender] -= amount;\n        payable(msg.sender).transfer(amount);\n        emit Withdrawn(msg.sender, amount);\n    }\n\n    function getBalance(address user) external view returns (uint256) {\n        return balances[user];\n    }\n}\n"
+      },
+      "project/contracts/Counter.sol": {
+        "content": "// SPDX-License-Identifier: UNLICENSED\npragma solidity ^0.8.28;\n\ncontract Counter {\n  uint public x;\n\n  event Increment(uint by);\n\n  function inc() public {\n    x++;\n    emit Increment(1);\n  }\n\n  function incBy(uint by) public {\n    require(by > 0, \"incBy: increment should be positive\");\n    x += by;\n    emit Increment(by);\n  }\n}\n"
+      }
+    }
+  }
+}

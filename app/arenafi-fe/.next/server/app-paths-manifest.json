@@ -1,9 +1,7 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/api/create-wallet/route": "app/api/create-wallet/route.js",
   "/api/user/[email]/route": "app/api/user/[email]/route.js",
+  "/arena/page": "app/arena/page.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/auth/sign-up/page": "app/auth/sign-up/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js"

@@ -37,7 +37,7 @@ export function SignUpForm({
     try {
       const MMSDK = new MetaMaskSDK({
         dappMetadata: {
-          name: "Next.js Dapp",
+          name: "ArenaFi - The Battle Arena",
           url: typeof window !== "undefined" ? window.location.href : "",
         },
         infuraAPIKey: "f302b612a16e4208b8f64973e42e3b84",
