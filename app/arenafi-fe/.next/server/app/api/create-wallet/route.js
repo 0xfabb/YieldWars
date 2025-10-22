@@ -1,0 +1,11 @@
+var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/create-wallet/route.js")
+R.c("server/chunks/node_modules_next_e4e4ccf2._.js")
+R.c("server/chunks/node_modules_ethers_lib_esm_7da17cf4._.js")
+R.c("server/chunks/node_modules_@noble_curves_esm_8f928e68._.js")
+R.c("server/chunks/node_modules_bip39_src_50bf9071._.js")
+R.c("server/chunks/node_modules_tailwind-merge_dist_bundle-mjs_mjs_c3b2c59f._.js")
+R.c("server/chunks/node_modules_7a16e613._.js")
+R.c("server/chunks/[root-of-the-server]__2eb55c2d._.js")
+R.m("[project]/.next-internal/server/app/api/create-wallet/route/actions.js [app-rsc] (server actions loader, ecmascript)")
+R.m("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/app/api/create-wallet/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)")
+module.exports=R.m("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/app/api/create-wallet/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)").exports

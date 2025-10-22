@@ -1,0 +1,1 @@
+export const MNEMONIC = "legal winner thank year wave sausage worth useful legal winner thank yellow"
