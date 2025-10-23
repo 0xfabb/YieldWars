@@ -2,3 +2,4 @@ contracts/node_modules
 app/arenafi-fe/node_modules 
 app/arenafi-fe/.env 
 app/arenafi-fe/.env.local
+app/arenafi-fe/.next/
