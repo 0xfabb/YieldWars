@@ -10,5 +10,9 @@
     "hardhat": "^3.0.8",
     "typescript": "~5.8.0",
     "viem": "^2.38.3"
+  },
+  "dependencies": {
+    "@pythnetwork/entropy-sdk-solidity": "^2.1.0",
+    "@pythnetwork/pyth-sdk-solidity": "^3.0.0"
   }
 }
