@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 220 26% 6%;
+    --foreground: 210 40% 98%;
+    --card: 220 26% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 220 26% 8%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 195 100% 50%;
+    --primary-foreground: 220 26% 6%;
+    --secondary: 220 26% 12%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 26% 12%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 195 100% 50%;
+    --accent-foreground: 220 26% 6%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 26% 15%;
+    --input: 220 26% 12%;
+    --ring: 195 100% 50%;
+    --chart-1: 195 100% 50%;
+    --chart-2: 180 100% 45%;
+    --chart-3: 210 100% 60%;
+    --chart-4: 240 100% 70%;
+    --chart-5: 270 100% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .arena-gradient {
+    background: linear-gradient(135deg, hsl(220, 26%, 6%) 0%, hsl(195, 100%, 8%) 50%, hsl(220, 26%, 6%) 100%);
+    position: relative;
+  }
+  
+  .arena-glow {
+    box-shadow: 0 0 20px hsla(195, 100%, 50%, 0.3);
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .arena-glow:hover {
+    box-shadow: 0 0 30px hsla(195, 100%, 50%, 0.5);
+  }
+  
+  .arena-text-glow {
+    text-shadow: 0 0 10px hsla(195, 100%, 50%, 0.5);
+  }
+  
+  .arena-border-glow {
+    border: 1px solid hsla(195, 100%, 50%, 0.3);
+    box-shadow: 0 0 10px hsla(195, 100%, 50%, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .arena-border-glow:hover {
+    border-color: hsla(195, 100%, 50%, 0.6);
+    box-shadow: 0 0 20px hsla(195, 100%, 50%, 0.2);
+  }
+  /* Battle Arena Specific Animations */
+  .battle-pulse {
+    animation: battlePulse 2s ease-in-out infinite;
+  }
+  
+  .eth-float {
+    animation: ethFloat 3s ease-in-out infinite;
+  }
+  
+  .neon-flicker {
+    animation: neonFlicker 1.5s ease-in-out infinite alternate;
+  }
+  
+  .victory-sparkle {
+    animation: victorySparkle 0.8s ease-in-out infinite;
+  }
+  
+  .arena-ring-pulse {
+    animation: arenaRingPulse 4s ease-in-out infinite;
+  }
+  
+  .cyber-glitch {
+    animation: cyberGlitch 0.3s ease-in-out infinite;
+  }
+  
+  .arena-ring-delay-1 {
+    animation-delay: 1s;
+  }
+  
+  .arena-ring-delay-2 {
+    animation-delay: 2s;
+  }
+}
+
+@keyframes battlePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px hsla(195, 100%, 50%, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 40px hsla(195, 100%, 50%, 0.6);
+  }
+}
+
+@keyframes ethFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-10px) rotate(120deg);
+  }
+  66% {
+    transform: translateY(5px) rotate(240deg);
+  }
+}
+
+@keyframes neonFlicker {
+  0% {
+    text-shadow: 0 0 10px hsla(195, 100%, 50%, 0.5);
+    box-shadow: 0 0 20px hsla(195, 100%, 50%, 0.3);
+  }
+  100% {
+    text-shadow: 0 0 20px hsla(195, 100%, 50%, 0.8);
+    box-shadow: 0 0 40px hsla(195, 100%, 50%, 0.6);
+  }
+}
+
+@keyframes victorySparkle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    filter: brightness(1.5);
+  }
+}
+
+@keyframes arenaRingPulse {
+  0%, 100% {
+    border-color: hsla(195, 100%, 50%, 0.3);
+    box-shadow: inset 0 0 20px hsla(195, 100%, 50%, 0.1);
+  }
+  50% {
+    border-color: hsla(195, 100%, 50%, 0.6);
+    box-shadow: inset 0 0 40px hsla(195, 100%, 50%, 0.3);
+  }
+}
+
+@keyframes cyberGlitch {
+  0%, 100% {
+    transform: translateX(0);
+    filter: hue-rotate(0deg);
+  }
+  20% {
+    transform: translateX(-2px);
+    filter: hue-rotate(90deg);
+  }
+  40% {
+    transform: translateX(2px);
+    filter: hue-rotate(180deg);
+  }
+  60% {
+    transform: translateX(-1px);
+    filter: hue-rotate(270deg);
+  }
+  80% {
+    transform: translateX(1px);
+    filter: hue-rotate(360deg);
+  }
+}
