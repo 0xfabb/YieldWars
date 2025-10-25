@@ -50,3 +50,11 @@ typechain-types/
 # Specific files to ignore
 server/src/tests/integration.test.ts
 contracts/ignition/modules/arena.ts
+
+contracts/.env
+server/.env
+server/.env.test    
+contracts/contracts/.env
+contracts/contracts/.env.test
+server/.env.example
+server/.env.test
