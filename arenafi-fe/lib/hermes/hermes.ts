@@ -34,6 +34,13 @@ export async function fetchLatestPrice(priceFeedId: string = ETH_USD_PRICE_FEED_
     const priceFeed = data[0];
     const price = priceFeed.price;
     
+    console.log("Pyth price data received:", {
+      price: price.price,
+      conf: price.conf,
+      expo: price.expo,
+      publishTime: price.publish_time
+    });
+    
     return {
       price: price.price,
       conf: price.conf,
@@ -66,7 +73,11 @@ export async function getPriceUpdateData(priceFeedIds: string[]): Promise<string
 
 // Format price for display (considering expo)
 export function formatPythPrice(price: string, expo: number): number {
-  const priceNumber = parseInt(price);
+  const priceNumber = parseFloat(price);
+  if (isNaN(priceNumber)) {
+    console.error("Invalid price string:", price);
+    return 0;
+  }
   return priceNumber * Math.pow(10, expo);
 }
 

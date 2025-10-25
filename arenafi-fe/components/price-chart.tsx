@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface PriceChartProps {
-  priceHistory: number[];
+  priceHistory?: number[];
   currentPrice: number;
   className?: string;
 }
@@ -12,14 +12,17 @@ interface PriceChartProps {
 export default function PriceChart({ priceHistory, currentPrice, className = "" }: PriceChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Safety check for priceHistory with useMemo to prevent unnecessary re-renders
+  const safePriceHistory = useMemo(() => priceHistory || [], [priceHistory]);
+
   // Calculate price change
-  const priceChange = priceHistory.length >= 2 ? 
-    ((priceHistory[priceHistory.length - 1] - priceHistory[priceHistory.length - 2]) / priceHistory[priceHistory.length - 2] * 100) : 0;
+  const priceChange = safePriceHistory.length >= 2 ? 
+    ((safePriceHistory[safePriceHistory.length - 1] - safePriceHistory[safePriceHistory.length - 2]) / safePriceHistory[safePriceHistory.length - 2] * 100) : 0;
   const isPositive = priceChange >= 0;
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || priceHistory.length < 2) return;
+    if (!canvas || safePriceHistory.length < 2) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -39,8 +42,8 @@ export default function PriceChart({ priceHistory, currentPrice, className = "" 
     const chartHeight = rect.height - padding * 2;
 
     // Find min and max prices for scaling
-    const minPrice = Math.min(...priceHistory);
-    const maxPrice = Math.max(...priceHistory);
+    const minPrice = Math.min(...safePriceHistory);
+    const maxPrice = Math.max(...safePriceHistory);
     const priceRange = maxPrice - minPrice || 1;
 
     // Draw price line with gradient
@@ -52,8 +55,8 @@ export default function PriceChart({ priceHistory, currentPrice, className = "" 
     ctx.lineWidth = 2;
     ctx.beginPath();
 
-    priceHistory.forEach((price, index) => {
-      const x = padding + (chartWidth / (priceHistory.length - 1)) * index;
+    safePriceHistory.forEach((price, index) => {
+      const x = padding + (chartWidth / (safePriceHistory.length - 1)) * index;
       const y = padding + chartHeight - ((price - minPrice) / priceRange) * chartHeight;
       
       if (index === 0) {
@@ -101,7 +104,7 @@ export default function PriceChart({ priceHistory, currentPrice, className = "" 
       currentY - 2
     );
 
-  }, [priceHistory, currentPrice, isPositive]);
+  }, [safePriceHistory, currentPrice, isPositive]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -139,7 +142,7 @@ export default function PriceChart({ priceHistory, currentPrice, className = "" 
           className="w-full h-full"
           style={{ width: "100%", height: "100%" }}
         />
-        {priceHistory.length < 2 && (
+        {safePriceHistory.length < 2 && (
           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
             Loading price data...
           </div>

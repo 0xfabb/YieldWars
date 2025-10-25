@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Gamepad2, Wallet, Copy, Trophy, Coins, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -68,7 +69,7 @@ export default function Dashboard() {
     try {
       const MMSDK = new MetaMaskSDK({
         dappMetadata: {
-          name: "ArenaFi - The Battle Arena",
+          name: "YieldWars - Yield Prediction Battles",
           url: typeof window !== "undefined" ? window.location.href : "",
         },
         infuraAPIKey: "f302b612a16e4208b8f64973e42e3b84",
@@ -142,7 +143,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen arena-gradient flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4 animate-in duration-500">Welcome to ArenaFi</p>
+          <p className="text-muted-foreground mb-4 animate-in duration-500">Welcome to YieldWars</p>
           <Button onClick={() => router.push("/auth/create-wallet")}>Create a New Wallet</Button>
         </div>
       </div>
@@ -158,7 +159,7 @@ export default function Dashboard() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center arena-glow">
               <Gamepad2 className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl sm:text-2xl font-bold arena-text-glow">ArenaFi</span>
+            <span className="text-xl sm:text-2xl font-bold arena-text-glow">YieldWars</span>
           </Link>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <span className="hidden sm:block text-sm text-muted-foreground">Welcome, {user.name}</span>
@@ -170,14 +171,49 @@ export default function Dashboard() {
         </div>
       </nav>
 
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6 sm:py-8">
         {/* Welcome Section */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 arena-text-glow">
-            Welcome to the Arena, {user.name}!
+            Welcome to YieldWars, {user.name}!
           </h1>
           <p className="text-base sm:text-lg lg:text-xl text-muted-foreground">
-            Connect your wallet to start battling.
+            Connect your wallet to start yield prediction battles powered by Pyth Network.
           </p>
+        </div>
+
+        {/* Live Price Feed Section */}
+        <div className="mb-6 sm:mb-8">
+          <Card className="arena-border-glow bg-gradient-to-r from-primary/10 to-secondary/10">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <span>Live ETH Price Feed</span>
+                <Badge variant="secondary" className="ml-2">Powered by Pyth</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">$3,847.23</div>
+                  <div className="text-sm text-muted-foreground">Current Price</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-500">+2.34%</div>
+                  <div className="text-sm text-muted-foreground">24h Change</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">$3,901.45</div>
+                  <div className="text-sm text-muted-foreground">24h High</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">$3,789.12</div>
+                  <div className="text-sm text-muted-foreground">24h Low</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
@@ -251,33 +287,67 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
-          </div>
 
-          {/* Stats & Actions */}
-          <div className="space-y-4 sm:space-y-6">
-            {/* Battle Stats */}
+            {/* Recent Battles */}
             <Card className="arena-border-glow">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Trophy className="w-5 h-5 text-primary" />
-                  <span>Battle Stats</span>
+                  <span>Recent Battles</span>
+                </CardTitle>
+                <CardDescription>
+                  Your latest yield prediction battles
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-muted/50 rounded-lg flex items-center justify-center mx-auto mb-4">
+                      <Trophy className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground mb-2">No battles yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Connect your wallet and start your first yield prediction battle!
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Stats & Actions */}
+          <div className="space-y-4 sm:space-y-6">
+            {/* Yield Battle Stats */}
+            <Card className="arena-border-glow">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Trophy className="w-5 h-5 text-primary" />
+                  <span>Yield Battle Stats</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm sm:text-base text-muted-foreground">Battles Won</span>
-                  <span className="text-sm sm:text-base font-bold">0</span>
+                  <span className="text-sm sm:text-base font-bold text-green-500">0</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm sm:text-base text-muted-foreground">Battles Lost</span>
+                  <span className="text-sm sm:text-base font-bold text-red-500">0</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm sm:text-base text-muted-foreground">Win Rate</span>
+                  <span className="text-sm sm:text-base font-bold">--%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm sm:text-base text-muted-foreground">Total Staked</span>
                   <span className="text-sm sm:text-base font-bold">0 ETH</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-muted-foreground">Rewards Earned</span>
-                  <span className="text-sm sm:text-base font-bold text-primary">0 $ARENA</span>
+                  <span className="text-sm sm:text-base text-muted-foreground">Total Rewards</span>
+                  <span className="text-sm sm:text-base font-bold text-primary">0 ETH</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-muted-foreground">Arena Rank</span>
+                  <span className="text-sm sm:text-base text-muted-foreground">Yield Rank</span>
                   <span className="text-sm sm:text-base font-bold">#--</span>
                 </div>
               </CardContent>
@@ -291,11 +361,15 @@ export default function Dashboard() {
               <CardContent className="space-y-2 sm:space-y-3">
                 <Button className="w-full arena-glow text-xs sm:text-sm" disabled={!user.connectedWallet} onClick={() => router.push('/arena')}>
                   <Coins className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                  Join Battle Arena
+                  Start Yield Battle
                 </Button>
                 <Button variant="outline" className="w-full arena-border-glow text-xs sm:text-sm">
                   <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                  View Leaderboard
+                  View Price Charts
+                </Button>
+                <Button variant="outline" className="w-full arena-border-glow text-xs sm:text-sm">
+                  <Trophy className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                  Leaderboard
                 </Button>
                 <Button variant="outline" className="w-full arena-border-glow text-xs sm:text-sm">
                   <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
@@ -307,28 +381,35 @@ export default function Dashboard() {
             {/* Getting Started */}
             <Card className="arena-border-glow">
               <CardHeader>
-                <CardTitle>Getting Started</CardTitle>
+                <CardTitle>Getting Started with YieldWars</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-xs sm:text-sm">
                 <div className="flex items-start space-x-2">
                   <div className="w-2 h-2 bg-primary rounded-full mt-1.5 sm:mt-2 shrink-0"></div>
                   <div>
-                    <div className="font-medium text-xs sm:text-sm">Connect External Wallet</div>
-                    <div className="text-muted-foreground text-xs">Link your MetaMask or other Web3 wallet</div>
+                    <div className="font-medium text-xs sm:text-sm">Connect MetaMask Wallet</div>
+                    <div className="text-muted-foreground text-xs">Link your MetaMask to start battles</div>
                   </div>
                 </div>
                 <div className="flex items-start space-x-2">
                   <div className="w-2 h-2 bg-muted-foreground rounded-full mt-1.5 sm:mt-2 shrink-0"></div>
                   <div>
                     <div className="font-medium text-xs sm:text-sm">Get Sepolia ETH</div>
-                    <div className="text-muted-foreground text-xs">Use a faucet to get testnet ETH</div>
+                    <div className="text-muted-foreground text-xs">Use Sepolia faucet for testnet ETH</div>
                   </div>
                 </div>
                 <div className="flex items-start space-x-2">
                   <div className="w-2 h-2 bg-muted-foreground rounded-full mt-1.5 sm:mt-2 shrink-0"></div>
                   <div>
-                    <div className="font-medium text-xs sm:text-sm">Enter Your First Battle</div>
-                    <div className="text-muted-foreground text-xs">Stake ETH directly from wallet</div>
+                    <div className="font-medium text-xs sm:text-sm">Make Price Predictions</div>
+                    <div className="text-muted-foreground text-xs">Predict if ETH price goes up or down</div>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full mt-1.5 sm:mt-2 shrink-0"></div>
+                  <div>
+                    <div className="font-medium text-xs sm:text-sm">Win with Pyth Data</div>
+                    <div className="text-muted-foreground text-xs">Authentic price feeds resolve battles</div>
                   </div>
                 </div>
               </CardContent>
@@ -336,5 +417,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+    </div>
   );
 }

@@ -3,3 +3,8 @@ arenafi-fe/node_modules
 arenafi-fe/.next/
 arenafi-fe/.env 
 arenafi-fe/.env.local
+server/src/tests/integration.test.ts
+contracts/ignition/modules/arena.ts
+server/node_modules
+server/.env
+server/.env.local

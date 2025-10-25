@@ -5,34 +5,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Target, Zap } from "lucide-react";
+import { Clock, Target, Zap, TrendingUp, TrendingDown } from "lucide-react";
 import { ethers } from "ethers";
 import { fetchLatestPrice, formatPythPrice, ETH_USD_PRICE_FEED_ID, PythPrice } from "@/lib/hermes/hermes";
-import { getArenaVaultContract } from "@/lib/arenaVault/arenaVault";
+import { arenaAPI } from "@/lib/arenaVault/arenaVault";
 import PriceChart from "@/components/price-chart";
 
 interface Battle {
-  id: bigint;
-  player1: string;
-  player2: string;
-  stake: bigint;
+  id: string;
+  player: string;
+  prediction: string;
+  isHigher: boolean;
+  stake: string;
+  startTime: number;
+  duration: number;
   resolved: boolean;
-  prediction1: bigint;
-  prediction2: bigint;
-  finalPrice: bigint;
-  winner: string;
-  participants: number;
-}
-
-interface RawBattle {
-  player1: string;
-  player2: string;
-  stake: bigint;
-  resolved: boolean;
-  prediction1: bigint;
-  prediction2: bigint;
-  finalPrice: bigint;
-  winner: string;
+  finalPrice?: string;
+  winner?: string;
+  createdAt: number;
+  expiresAt: number;
 }
 
 interface PredictionBattleProps {
@@ -45,18 +36,12 @@ export default function PredictionBattle({ user }: PredictionBattleProps) {
   const [battles, setBattles] = useState<Battle[]>([]);
   const [isLoadingBattles, setIsLoadingBattles] = useState(false);
   const [isCreatingBattle, setIsCreatingBattle] = useState(false);
-  const [isJoiningBattle, setIsJoiningBattle] = useState(false);
-  const [selectedBattle, setSelectedBattle] = useState<string | null>(null);
   
   // Battle creation form
   const [stakeAmount, setStakeAmount] = useState("0.01");
   const [prediction, setPrediction] = useState("");
-  
-  // Individual predictions for each battle (battleId -> prediction)
-  const [battlePredictions, setBattlePredictions] = useState<Map<string, string>>(new Map());
-  
-  // Individual resolve states for each battle (battleId -> isResolving)
-  const [resolvingBattles, setResolvingBattles] = useState<Map<string, boolean>>(new Map());
+  const [isHigherPrediction, setIsHigherPrediction] = useState(true);
+  const [duration, setDuration] = useState(300); // 5 minutes default
   
   // Price data
   const [currentPrice, setCurrentPrice] = useState<PythPrice | null>(null);
@@ -64,75 +49,68 @@ export default function PredictionBattle({ user }: PredictionBattleProps) {
 
   // Fetch current ETH price
   const fetchCurrentPrice = useCallback(async () => {
-    const price = await fetchLatestPrice(ETH_USD_PRICE_FEED_ID);
-    if (price) {
-      setCurrentPrice(price);
-      const formattedPrice = formatPythPrice(price.price, price.expo);
-      setPriceHistory(prev => [...prev.slice(-19), formattedPrice]);
+    try {
+      console.log("Fetching current price...");
+      const price = await fetchLatestPrice(ETH_USD_PRICE_FEED_ID);
+      console.log("Received price:", price);
+      
+      if (price) {
+        setCurrentPrice(price);
+        const formattedPrice = formatPythPrice(price.price, price.expo);
+        console.log("Formatted price:", formattedPrice);
+        setPriceHistory(prev => [...prev.slice(-19), formattedPrice]);
+      } else {
+        console.log("No price received from Pyth");
+      }
+    } catch (error) {
+      console.error("Failed to fetch current price:", error);
     }
   }, []);
 
+  // Fetch battles from API
   const fetchBattles = useCallback(async () => {
     if (!user?.connectedWallet) return;
     
     setIsLoadingBattles(true);
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum!);
-      const vault = getArenaVaultContract(provider);
-      
-      console.log("🏗️ Fetching battles from contract:", await vault.getAddress());
-      
-      const allBattles = await vault.getAllBattles();
-      console.log("📊 Raw battles from contract:", allBattles);
-      console.log("📊 Number of battles:", allBattles.length);
-      
-      // Handle empty battles array
-      if (!allBattles || allBattles.length === 0) {
-        console.log("✨ No battles found - this is expected for a new contract!");
+      const response = await arenaAPI.getBattles();
+      if (response.success) {
+        setBattles(response.battles || []);
+      } else {
+        console.error("Failed to fetch battles:", response.error);
         setBattles([]);
-        return;
       }
-      
-      const formattedBattles = allBattles.map((battle: RawBattle, index: number) => ({
-        id: BigInt(index),
-        player1: battle.player1,
-        player2: battle.player2,
-        stake: battle.stake,
-        resolved: battle.resolved,
-        prediction1: battle.prediction1,
-        prediction2: battle.prediction2,
-        finalPrice: battle.finalPrice,
-        winner: battle.winner,
-        participants: battle.player2 === ethers.ZeroAddress ? 1 : 2
-      }));
-      
-      setBattles(formattedBattles);
     } catch (error) {
       console.error("Failed to fetch battles:", error);
+      setBattles([]);
     } finally {
       setIsLoadingBattles(false);
     }
   }, [user?.connectedWallet]);
 
-  // Fetch battles on component mount and when user changes
+  // Auto-refresh data
   useEffect(() => {
+    // Always fetch current price, regardless of wallet connection
+    fetchCurrentPrice();
+    
+    // Only fetch battles if wallet is connected
     if (user?.connectedWallet) {
       fetchBattles();
-      fetchCurrentPrice();
-      
-      // Set up polling to refresh battles every 15 seconds
-      const interval = setInterval(() => {
-        fetchBattles();
-        fetchCurrentPrice();
-      }, 15000);
-      
-      return () => clearInterval(interval);
     }
+    
+    const interval = setInterval(() => {
+      fetchCurrentPrice(); // Always fetch price
+      if (user?.connectedWallet) {
+        fetchBattles(); // Only fetch battles if wallet connected
+      }
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(interval);
   }, [user?.connectedWallet, fetchBattles, fetchCurrentPrice]);
 
-  // Create a new battle
+  // Create a new battle via API
   const handleCreateBattle = async () => {
-    if (!user?.connectedWallet || !window.ethereum!) {
+    if (!user?.connectedWallet) {
       alert("Please connect your MetaMask wallet first!");
       return;
     }
@@ -150,66 +128,68 @@ export default function PredictionBattle({ user }: PredictionBattleProps) {
     setIsCreatingBattle(true);
     
     try {
-      await window.ethereum!.request({ method: 'eth_requestAccounts' });
-      
-      const provider = new ethers.BrowserProvider(window.ethereum!);
+      // Request payment from user's wallet
+      if (!window.ethereum) {
+        throw new Error("MetaMask not found");
+      }
+
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const vault = getArenaVaultContract(signer);
       
-      console.log("Creating battle with:", {
-        stakeAmount,
-        prediction,
-        contractAddress: vault.target
+      // Send ETH to the server wallet for the battle
+      const stakeWei = ethers.parseEther(stakeAmount);
+      const serverWallet = "0x1Be31A94361a391bBaFB2a4CCd704F57dc04d4bb"; // ArenaFi server wallet
+      
+      const tx = await signer.sendTransaction({
+        to: serverWallet,
+        value: stakeWei
       });
+
+      console.log("Payment transaction sent:", tx.hash);
+      await tx.wait();
+      console.log("Payment confirmed");
+
+      // Create battle via API (temporary V1 format for compatibility)
+      const battleData = {
+        userAddress: user.connectedWallet,
+        stakeWei: stakeWei.toString(),
+        predictionValue: prediction,
+        durationSec: duration
+      };
+
+      const response = await arenaAPI.createBattle(battleData);
+      console.log("Battle creation response:", JSON.stringify(response, null, 2));
       
-      // Convert prediction price to int64 format (scaled by 1e8)
-      const predictionScaled = Math.floor(parseFloat(prediction) * 1e8);
-      
-      // For int64, we need to ensure it fits in the range
-      if (predictionScaled > 9223372036854775807 || predictionScaled < -9223372036854775808) {
-        alert("Prediction value is too large for int64. Please enter a smaller price.");
-        setIsCreatingBattle(false);
-        return;
+      if (response.success) {
+        console.log("Battle created successfully:", response);
+        
+        // Clear form
+        setPrediction("");
+        setStakeAmount("0.01");
+        setIsHigherPrediction(true);
+        setDuration(300);
+        
+        // Refresh battles
+        await fetchBattles();
+        
+        alert(`Battle created successfully! It will auto-resolve in ${duration / 60} minutes.`);
+      } else {
+        throw new Error(response.error || "Failed to create battle");
       }
       
-      console.log(" Creating battle with parameters:", {
-        prediction: prediction,
-        predictionScaled: predictionScaled,
-        stakeWei: ethers.parseEther(stakeAmount).toString()
-      });
-      
-      const tx = await vault.createBattle(predictionScaled, {
-        value: ethers.parseEther(stakeAmount)
-      });
-      
-      console.log("Transaction sent:", tx.hash);
-      await tx.wait();
-      console.log("Battle created successfully!");
-      
-      await fetchBattles();
-      
-      // Reset form
-      setPrediction("");
-      setStakeAmount("0.01");
-      
-      alert(" Battle created successfully! Waiting for opponents...");
-      
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Failed to create battle:", error);
       
       let errorMessage = "Failed to create battle. ";
-      if (error && typeof error === 'object' && 'code' in error && (error.code === 4001 || error.code === 'ACTION_REJECTED')) {
+      if (error.code === 4001 || error.code === 'ACTION_REJECTED') {
         errorMessage = "Transaction was rejected by user.";
-      } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-        if (error.message.includes("insufficient funds")) {
-          errorMessage += "Insufficient ETH balance in wallet.";
-        } else if (error.message.includes("user denied") || error.message.includes("rejected")) {
-          errorMessage = "Transaction was rejected by user.";
-        } else {
-          errorMessage += error.message;
-        }
+      } else if (error.message?.includes("insufficient funds")) {
+        errorMessage += "Insufficient ETH balance in wallet.";
+      } else if (error.message?.includes("user denied") || error.message?.includes("rejected")) {
+        errorMessage = "Transaction was rejected by user.";
       } else {
-        errorMessage += "Unknown error occurred.";
+        errorMessage += error.message || "Unknown error occurred.";
       }
       alert(errorMessage);
     } finally {
@@ -217,384 +197,217 @@ export default function PredictionBattle({ user }: PredictionBattleProps) {
     }
   };
 
-  // Join an existing battle
-  const handleJoinBattle = async (battleId: bigint) => {
-    if (!user?.connectedWallet || !window.ethereum!) {
-      alert("Please connect your MetaMask wallet first!");
-      return;
-    }
-
-    const battlePrediction = battlePredictions.get(battleId.toString()) || "";
-    if (!battlePrediction || parseFloat(battlePrediction) <= 0) {
-      alert("Please enter your price prediction for this battle!");
-      return;
-    }
-
-    const battle = battles.find(b => b.id === battleId);
-    if (!battle) return;
-
-    setIsJoiningBattle(true);
-    setSelectedBattle(battleId.toString());
+  // Format time remaining
+  const formatTimeRemaining = (battle: Battle) => {
+    const now = Math.floor(Date.now() / 1000);
+    const remaining = battle.expiresAt - now;
     
+    if (remaining <= 0) {
+      return "Expired";
+    }
+    
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Format stake amount
+  const formatStake = (stakeWei: string) => {
     try {
-      await window.ethereum!.request({ method: 'eth_requestAccounts' });
-      
-      const provider = new ethers.BrowserProvider(window.ethereum!);
-      const signer = await provider.getSigner();
-      const vault = getArenaVaultContract(signer);
-      
-      // Convert prediction price to int64 format (scaled by 1e8)
-      const predictionScaled = Math.floor(parseFloat(battlePrediction) * 1e8);
-      
-      console.log("Joining battle:", battleId.toString(), "with prediction:", battlePrediction, "scaled:", predictionScaled);
-      
-      // Send transaction with ETH value matching the battle stake
-      const tx = await vault.joinBattle(battleId, predictionScaled, {
-        value: battle.stake
-      });
-      
-      console.log("Transaction sent:", tx.hash);
-      await tx.wait();
-      console.log("Joined battle successfully!");
-      
-      await fetchBattles();
-      
-      // Clear the prediction for this battle
-      const newPredictions = new Map(battlePredictions);
-      newPredictions.delete(battleId.toString());
-      setBattlePredictions(newPredictions);
-      
-      alert("Joined battle successfully! Battle is now active!");
-      
-    } catch (error: unknown) {
-      console.error("Failed to join battle:", error);
-      
-      let errorMessage = "Failed to join battle. ";
-      if (error && typeof error === 'object' && 'code' in error && (error.code === 4001 || error.code === 'ACTION_REJECTED')) {
-        errorMessage = "Transaction was rejected by user.";
-      } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-        if (error.message.includes("insufficient funds")) {
-          errorMessage += "Insufficient ETH balance in wallet.";
-        } else if (error.message.includes("user denied") || error.message.includes("rejected")) {
-          errorMessage = "Transaction was rejected by user.";
-        } else if (error.message.includes("Already full")) {
-          errorMessage += "This battle is already full.";
-        } else if (error.message.includes("Stake mismatch")) {
-          errorMessage += "ETH amount doesn't match the required stake.";
-        } else {
-          errorMessage += error.message;
-        }
-      } else {
-        errorMessage += "Unknown error occurred.";
-      }
-      alert(errorMessage);
-    } finally {
-      setIsJoiningBattle(false);
-      setSelectedBattle(null);
+      return parseFloat(ethers.formatEther(stakeWei)).toFixed(4);
+    } catch {
+      return "0.0000";
     }
   };
 
-  // Function to fetch Pyth price update data
-  const fetchPriceUpdateData = async (): Promise<string[]> => {
+  // Format prediction price
+  const formatPredictionPrice = (prediction: string) => {
     try {
-      const response = await fetch(
-        `https://hermes.pyth.network/v2/updates/price/latest?ids[]=${ETH_USD_PRICE_FEED_ID}&encoding=hex`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch price data: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data.binary.data || [];
-    } catch (error) {
-      console.error("Error fetching price update data:", error);
-      return []; // Return empty array as fallback
+      return parseFloat(prediction).toFixed(2);
+    } catch {
+      return "0.00";
     }
-  };
-
-  // Resolve battle using Pyth price data
-  const handleResolveBattle = async (battleId: bigint) => {
-    console.log("🎯 Starting battle resolution for:", battleId.toString());
-    
-    if (!user?.connectedWallet || !window.ethereum!) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
-    // Set resolving state for this specific battle
-    const newResolvingBattles = new Map(resolvingBattles);
-    newResolvingBattles.set(battleId.toString(), true);
-    setResolvingBattles(newResolvingBattles);
-    
-    try {
-      console.log("🔗 Requesting wallet access...");
-      await window.ethereum!.request({ method: 'eth_requestAccounts' });
-      
-      console.log("🌐 Creating provider and signer...");
-      const provider = new ethers.BrowserProvider(window.ethereum!);
-      const signer = await provider.getSigner();
-      const vault = getArenaVaultContract(signer);
-      
-      console.log("📋 Contract address:", await vault.getAddress());
-      console.log("👤 Signer address:", await signer.getAddress());
-      console.log("💰 Wallet balance:", ethers.formatEther(await provider.getBalance(await signer.getAddress())), "ETH");
-      
-      console.log("⚔️ Resolving battle:", battleId.toString());
-      
-      // Fetch real Pyth price update data from Hermes API
-      console.log("📡 Fetching price update data from Hermes...");
-      const priceUpdateData = await fetchPriceUpdateData();
-      console.log("📊 Price update data fetched:", priceUpdateData);
-      console.log("📊 Price update data length:", priceUpdateData.length);
-      
-      // Calculate the exact fee required by Pyth for this update
-      console.log("Calculating Pyth update fee...");
-      
-      // Create Pyth contract instance to get update fee
-      const pythAddress = "0x2880aB155794e7179c9eE2e38200202908C17B43"; // Pyth on Sepolia
-      const pythAbi = [
-        "function getUpdateFee(bytes[] calldata updateData) external view returns (uint feeAmount)"
-      ];
-      const pythContract = new ethers.Contract(pythAddress, pythAbi, provider);
-      
-      const updateFee = await pythContract.getUpdateFee(priceUpdateData);
-      console.log("Pyth update fee:", ethers.formatEther(updateFee), "ETH");
-      
-      const tx = await vault.resolveBattle(battleId, priceUpdateData, {
-        value: updateFee // Send exact fee required by Pyth
-      });
-      
-      console.log("Transaction sent:", tx.hash);
-      await tx.wait();
-      console.log("Battle resolved successfully!");
-      
-      await fetchBattles();
-      alert("Battle resolved successfully!");
-      
-    } catch (error: unknown) {
-      console.error("Failed to resolve battle:", error);
-      
-      let errorMessage = "Failed to resolve battle. ";
-      if (error && typeof error === 'object' && 'code' in error && error.code === 4001) {
-        errorMessage += "Transaction was rejected.";
-      } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-        errorMessage += error.message;
-      } else {
-        errorMessage += "Unknown error occurred.";
-      }
-      alert(errorMessage);
-    } finally {
-      // Clear resolving state for this specific battle
-      const newResolvingStates = new Map(resolvingBattles);
-      newResolvingStates.delete(battleId.toString());
-      setResolvingBattles(newResolvingStates);
-    }
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(price);
   };
 
   return (
     <div className="space-y-6">
-      {/* Current ETH Price */}
-      <Card className="arena-border-glow">
+      {/* Current Price Display */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Target className="w-5 h-5" />
-            <span>ETH Price Prediction</span>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Current ETH Price
           </CardTitle>
-          <CardDescription>
-            Live price data powered by Pyth Network
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          <PriceChart 
-            priceHistory={priceHistory} 
-            currentPrice={currentPrice ? formatPythPrice(currentPrice.price, currentPrice.expo) : 0}
-          />
+          {currentPrice ? (
+            <div className="space-y-4">
+              <div className="text-3xl font-bold">
+                ${formatPythPrice(currentPrice.price, currentPrice.expo).toFixed(2)}
+              </div>
+              {priceHistory.length > 1 && (
+                <PriceChart 
+                  priceHistory={priceHistory} 
+                  currentPrice={formatPythPrice(currentPrice.price, currentPrice.expo)} 
+                />
+              )}
+            </div>
+          ) : (
+            <div className="text-muted-foreground">Loading price...</div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Create Battle */}
-      <Card className="arena-border-glow">
+      {/* Create Battle Form */}
+      <Card>
         <CardHeader>
-          <CardTitle>Create Prediction Battle</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            Create Price Prediction
+          </CardTitle>
           <CardDescription>
-            Stake ETH and predict the future price of ETH/USD
+            Predict where ETH price will be in the next few minutes. Server handles resolution automatically.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div>
               <label className="text-sm font-medium">Stake Amount (ETH)</label>
               <Input
                 type="number"
-                step="0.01"
-                min="0.01"
+                step="0.001"
+                min="0.001"
                 value={stakeAmount}
                 onChange={(e) => setStakeAmount(e.target.value)}
                 placeholder="0.01"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Price Prediction (USD)</label>
+            <div>
+              <label className="text-sm font-medium">Duration (seconds)</label>
               <Input
                 type="number"
-                step="0.01"
-                min="0"
-                value={prediction}
-                onChange={(e) => setPrediction(e.target.value)}
-                placeholder="3500.00"
+                min="60"
+                max="3600"
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value) || 300)}
+                placeholder="300"
               />
             </div>
           </div>
           
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>Creating a battle will send {stakeAmount} ETH directly from your wallet</p>
-            <p>Make sure you have enough ETH in your wallet for the stake + gas fees</p>
+          <div>
+            <label className="text-sm font-medium">Price Prediction ($)</label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={prediction}
+              onChange={(e) => setPrediction(e.target.value)}
+              placeholder="2500.00"
+            />
           </div>
-          
-          <Button 
+
+          <div className="flex gap-2">
+            <Button
+              variant={isHigherPrediction ? "default" : "outline"}
+              onClick={() => setIsHigherPrediction(true)}
+              className="flex-1"
+            >
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Higher
+            </Button>
+            <Button
+              variant={!isHigherPrediction ? "default" : "outline"}
+              onClick={() => setIsHigherPrediction(false)}
+              className="flex-1"
+            >
+              <TrendingDown className="h-4 w-4 mr-2" />
+              Lower
+            </Button>
+          </div>
+
+          <Button
             onClick={handleCreateBattle}
-            disabled={isCreatingBattle || !user?.connectedWallet || !currentPrice}
+            disabled={isCreatingBattle || !user?.connectedWallet}
             className="w-full"
           >
-            {isCreatingBattle ? "Creating..." : "Create Battle"}
+            {isCreatingBattle ? "Creating..." : "Create Prediction Battle"}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Active Prediction Battles */}
-      <Card className="arena-border-glow">
+      {/* Active Battles */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="w-5 h-5" />
-            <span>Prediction Battles</span>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Your Battles
           </CardTitle>
-          <CardDescription>Join active prediction battles or view results</CardDescription>
+          <CardDescription>
+            Track your active and completed prediction battles
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoadingBattles ? (
-            <div className="text-center text-muted-foreground">Loading battles...</div>
+            <div className="text-center py-4">Loading battles...</div>
           ) : battles.length === 0 ? (
-            <div className="text-center text-muted-foreground">No battles found. Create the first one!</div>
+            <div className="text-center py-4 text-muted-foreground">
+              No battles found. Create your first prediction battle above!
+            </div>
           ) : (
             <div className="space-y-4">
-              {battles.map((battle) => {
-                const stakeAmountEth = ethers.formatEther(battle.stake);
-                const canJoin = !battle.resolved && battle.participants === 1 && 
-                              battle.player1.toLowerCase() !== user?.connectedWallet?.toLowerCase();
-                const isActive = !battle.resolved && battle.participants === 2;
-                const isResolved = battle.resolved;
-                const canResolve = isActive; // Anyone can resolve when both players joined
-
-                return (
-                  <div key={battle.id.toString()} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <Badge className={isResolved ? 'bg-gray-500' : canJoin ? 'bg-blue-500' : 'bg-green-500'}>
-                            {isResolved ? 'Resolved' : canJoin ? 'Open' : 'Active'}
-                          </Badge>
-                          <span className="text-sm font-medium">Battle #{battle.id.toString()}</span>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Stake: {stakeAmountEth} ETH | Players: {battle.participants}/2
-                        </div>
-                      </div>
-                      <div className="text-right text-sm">
-                        {isActive && (
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-4 h-4" />
-                            <span>Ready to resolve</span>
-                          </div>
-                        )}
+              {battles.map((battle) => (
+                <div key={battle.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <Badge variant={battle.resolved ? "secondary" : "default"}>
+                        {battle.resolved ? "Resolved" : "Active"}
+                      </Badge>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Battle #{battle.id}
                       </div>
                     </div>
-
-                    {battle.participants === 2 && (
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="space-y-1">
-                          <div className="font-medium">Player 1</div>
-                          <div className="text-muted-foreground">
-                            {battle.player1.slice(0, 6)}...{battle.player1.slice(-4)}
-                          </div>
-                          <div>Prediction: {formatPrice(Number(battle.prediction1) / 1e8)}</div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="font-medium">Player 2</div>
-                          <div className="text-muted-foreground">
-                            {battle.player2.slice(0, 6)}...{battle.player2.slice(-4)}
-                          </div>
-                          <div>Prediction: {formatPrice(Number(battle.prediction2) / 1e8)}</div>
-                        </div>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {formatStake(battle.stake)} ETH
                       </div>
-                    )}
-
-                    {isResolved && battle.finalPrice > BigInt(0) && (
-                      <div className="text-sm space-y-1">
-                        <div>Final Price: {formatPrice(Number(battle.finalPrice) / 1e8)}</div>
-                      </div>
-                    )}
-
-                    {isResolved && battle.winner !== ethers.ZeroAddress && (
-                      <div className="text-sm">
-                        <Badge variant="outline" className="text-green-400">
-                          Winner: {battle.winner.slice(0, 6)}...{battle.winner.slice(-4)}
-                        </Badge>
-                      </div>
-                    )}
-
-                    <div className="flex space-x-2">
-                      {canJoin && (
-                        <div className="flex-1 space-y-2">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={battlePredictions.get(battle.id.toString()) || ""}
-                            onChange={(e) => {
-                              const newPredictions = new Map(battlePredictions);
-                              newPredictions.set(battle.id.toString(), e.target.value);
-                              setBattlePredictions(newPredictions);
-                            }}
-                            placeholder="Your prediction ($)"
-                            className="text-sm"
-                          />
-                          <Button 
-                            size="sm" 
-                            className="w-full"
-                            disabled={!user?.connectedWallet || isJoiningBattle || !battlePredictions.get(battle.id.toString())}
-                            onClick={() => handleJoinBattle(battle.id)}
-                          >
-                            {selectedBattle === battle.id.toString() && isJoiningBattle ? "Joining..." : 
-                             !user?.connectedWallet ? "Connect Wallet" :
-                             "Join Battle"}
-                          </Button>
+                      {!battle.resolved && (
+                        <div className="text-sm text-muted-foreground">
+                          {formatTimeRemaining(battle)}
                         </div>
-                      )}
-                      
-                      {canResolve && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          disabled={resolvingBattles.get(battle.id.toString()) || !user?.connectedWallet}
-                          onClick={() => handleResolveBattle(battle.id)}
-                        >
-                          {resolvingBattles.get(battle.id.toString()) ? "Resolving..." : "Resolve Battle"}
-                        </Button>
                       )}
                     </div>
                   </div>
-                );
-              })}
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Prediction:</span>
+                      <div className="flex items-center gap-1">
+                        {battle.isHigher ? (
+                          <TrendingUp className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-500" />
+                        )}
+                        ${formatPredictionPrice(battle.prediction)}
+                      </div>
+                    </div>
+                    {battle.resolved && battle.finalPrice && (
+                      <div>
+                        <span className="text-muted-foreground">Final Price:</span>
+                        <div>${formatPredictionPrice(battle.finalPrice)}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {battle.resolved && (
+                    <div className="mt-2 pt-2 border-t">
+                      <Badge variant={battle.winner === battle.player ? "default" : "destructive"}>
+                        {battle.winner === battle.player ? "Won!" : "Lost"}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

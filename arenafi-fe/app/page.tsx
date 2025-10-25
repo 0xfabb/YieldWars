@@ -15,7 +15,7 @@ export default function Home() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center arena-glow">
               <Gamepad2 className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold arena-text-glow">ArenaFi</span>
+            <span className="text-2xl font-bold arena-text-glow">YieldWars</span>
           </div>
           <div className="hidden md:flex items-center space-x-8">
             <a href="#features" className="text-muted-foreground hover:text-primary transition-colors">Features</a>
@@ -38,15 +38,15 @@ export default function Home() {
         <div className="max-w-4xl mx-auto">
           <Badge className="mb-6 arena-glow" variant="secondary">
             <Zap className="w-4 h-4 mr-2" />
-            DeFi Gaming Revolution
+            Yield Prediction Revolution
           </Badge>
           <h1 className="text-6xl md:text-8xl font-bold mb-6 arena-text-glow">
-            Where Gaming Meets
-            <span className="text-primary block">DeFi</span>
+            Predict ETH Price
+            <span className="text-primary block">Movements</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            ArenaFi is where the thrill of gaming collides with the power of decentralized finance — 
-            a blazing, on-chain battlefield where every ETH you stake becomes your fighter.
+            YieldWars brings real-time price prediction battles powered by Pyth Network — 
+            stake Sepolia ETH, predict price movements, and win with authentic price feeds.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/sign-up">

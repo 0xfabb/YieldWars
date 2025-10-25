@@ -80,7 +80,7 @@ export default function BattleArena() {
           <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center arena-glow mx-auto mb-4 animate-pulse">
             <Gamepad2 className="w-8 h-8 text-primary-foreground" />
           </div>
-          <p className="text-muted-foreground">Loading the Arena...</p>
+          <p className="text-muted-foreground">Loading YieldWars...</p>
         </div>
       </div>
     );
@@ -90,7 +90,7 @@ export default function BattleArena() {
     return (
       <div className="min-h-screen arena-gradient flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Please login to access the Battle Arena</p>
+          <p className="text-muted-foreground mb-4">Please login to access YieldWars</p>
           <Button onClick={() => router.push("/auth/login")}>Login</Button>
         </div>
       </div>
@@ -117,7 +117,7 @@ export default function BattleArena() {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center arena-glow">
                 <Target className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl sm:text-2xl font-bold arena-text-glow">Battle Arena</span>
+              <span className="text-xl sm:text-2xl font-bold arena-text-glow">YieldWars Arena</span>
             </div>
           </div>
           

@@ -1,3 +1,7 @@
+ethers
+const contract = await ethers.getContractAt("ArenaVaultV2", "0xfE3A48A1A8c7a4E51F7027C6563C7E4BE726923B")
+const currentResolver = await contract.resolver();console.log("Current resolver:", currentResolver);
+const contract = await ethers.getContractAt("ArenaVaultV2", "0xfE3A48A1A8c7a4E51F7027C6563C7E4BE726923B");
 console.log("Balance in vault:", balance.toString());
 const balance = await vault.getBalance(myAddress);
 const myAddress = "0x597ce9c71f24f3fa0b7a5b30d2708e4a3c05b70d"; // example

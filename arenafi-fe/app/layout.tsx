@@ -9,8 +9,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "ArenaFi - DeFi Gaming Arena",
-  description: "Where gaming meets DeFi. Stake, battle, and earn in the ultimate on-chain PvP arena.",
+  title: "YieldWars - Yield Prediction Battles",
+  description: "Predict ETH price movements in real-time battles. Powered by Pyth Network for authentic price feeds.",
 };
 
 const geistSans = Geist({

@@ -2,6 +2,7 @@ import type { HardhatUserConfig } from "hardhat/config";
 import "dotenv/config";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import "@nomicfoundation/hardhat-ethers";
 import { configVariable } from "hardhat/config";
 
 const url = process.env.SEPOLIA_RPC_URL;
