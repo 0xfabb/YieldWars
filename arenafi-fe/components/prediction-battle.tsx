@@ -178,18 +178,20 @@ export default function PredictionBattle({ user }: PredictionBattleProps) {
         throw new Error(response.error || "Failed to create battle");
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to create battle:", error);
       
       let errorMessage = "Failed to create battle. ";
-      if (error.code === 4001 || error.code === 'ACTION_REJECTED') {
+      const err = error as { code?: number | string; message?: string };
+      
+      if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
         errorMessage = "Transaction was rejected by user.";
-      } else if (error.message?.includes("insufficient funds")) {
+      } else if (err.message?.includes("insufficient funds")) {
         errorMessage += "Insufficient ETH balance in wallet.";
-      } else if (error.message?.includes("user denied") || error.message?.includes("rejected")) {
+      } else if (err.message?.includes("user denied") || err.message?.includes("rejected")) {
         errorMessage = "Transaction was rejected by user.";
       } else {
-        errorMessage += error.message || "Unknown error occurred.";
+        errorMessage += err.message || "Unknown error occurred.";
       }
       alert(errorMessage);
     } finally {
